@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   @default("client")
+  name      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Lead {
+  id        String     @id @default(uuid())
+  phone     String     @unique
+  firstName String?    @map("first_name")
+  fullName  String?    @map("full_name")
+  extras    Json       @default("{}")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  dispatches Dispatch[]
+
+  @@map("leads")
+}
+
+model WaNumber {
+  id                String   @id @default(uuid())
+  phone             String
+  appName           String   @map("app_name")
+  apiKey            String   @map("api_key")
+  active            Boolean  @default(true)
+  sentCount         Int      @default(0) @map("sent_count")
+  dailyLimit        Int      @default(1000) @map("daily_limit")
+  restrictionStatus String?  @map("restriction_status")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  dispatches Dispatch[]
+
+  @@map("wa_numbers")
+}
+
+model Campaign {
+  id             String   @id @default(uuid())
+  name           String
+  templateId     String?  @map("template_id")
+  templateParams String[] @map("template_params")
+  message        String?
+  link           String?
+  imageUrl       String?  @map("image_url")
+  status         String   @default("draft")
+  pausedReason   String?  @map("paused_reason")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  dispatches Dispatch[]
+
+  @@map("campaigns")
+}
+
+model Dispatch {
+  id               String    @id @default(uuid())
+  campaignId       String    @map("campaign_id")
+  leadId           String    @map("lead_id")
+  waNumberId       String    @map("wa_number_id")
+  status           String    @default("pending")
+  gupshupMessageId String?   @map("gupshup_message_id")
+  waMessageId      String?   @map("wa_message_id")
+  errorMsg         String?   @map("error_msg")
+  sentAt           DateTime? @map("sent_at")
+  deliveredAt      DateTime? @map("delivered_at")
+  readAt           DateTime? @map("read_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  campaign   Campaign  @relation(fields: [campaignId], references: [id])
+  lead       Lead      @relation(fields: [leadId], references: [id])
+  waNumber   WaNumber  @relation(fields: [waNumberId], references: [id])
+
+  @@index([gupshupMessageId])
+  @@index([campaignId])
+  @@index([status])
+  @@map("dispatches")
+}

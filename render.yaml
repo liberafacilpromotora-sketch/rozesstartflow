@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: startflow-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: startflow-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: startflow-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: FRONTEND_URL
+        value: https://startflow-frontend.onrender.com
+
+  - type: web
+    name: startflow-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://startflow-backend.onrender.com
+
+  - type: redis
+    name: startflow-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+
+databases:
+  - name: startflow-db
+    databaseName: startflow
+    user: startflow
+    plan: free
