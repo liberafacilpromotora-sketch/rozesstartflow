@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '@/lib/api'
 import { formatNumber } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Upload, Search, ChevronLeft, ChevronRight, FileText, Loader2 } from 'lucide-react'
+import { Upload, Search, ChevronLeft, ChevronRight, FileText, Loader2, Download } from 'lucide-react'
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any>(null)
@@ -43,8 +43,23 @@ export default function LeadsPage() {
     load(p, search)
   }
 
+  function downloadTemplate() {
+    const rows = [
+      'nome;telefone;email',
+      'João Silva;11999999999;joao@email.com',
+      'Maria Souza;21988888888;maria@email.com',
+    ]
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'modelo_leads.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function handleFile(file: File) {
-    if (!file.name.toLowerCase().endsWith('.csv')) return toast.error('Envie um arquivo CSV')
+    if (!file.name.toLowerCase().endsWith('.csv')) return toast.error('Envie um arquivo CSV (.csv)')
     setUploading(true)
     try {
       const res = await api.importLeads(file)
@@ -76,15 +91,24 @@ export default function LeadsPage() {
           </p>
         </div>
 
-        {/* Upload button */}
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="flex items-center gap-2 h-8 px-3.5 rounded-md bg-emerald-500 hover:bg-emerald-600 text-sm font-medium text-white transition-colors disabled:opacity-50"
-        >
-          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          {uploading ? 'Importando...' : 'Importar CSV'}
-        </button>
+        {/* Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={downloadTemplate}
+            className="flex items-center gap-2 h-8 px-3.5 rounded-md border border-[var(--border)] hover:bg-[var(--surface-2)] text-sm font-medium transition-colors"
+          >
+            <Download size={14} />
+            Baixar Modelo
+          </button>
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 h-8 px-3.5 rounded-md bg-emerald-500 hover:bg-emerald-600 text-sm font-medium text-white transition-colors disabled:opacity-50"
+          >
+            {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+            {uploading ? 'Importando...' : 'Importar CSV'}
+          </button>
+        </div>
         <input
           ref={fileRef}
           type="file"
@@ -109,10 +133,10 @@ export default function LeadsPage() {
         <FileText size={24} className="mx-auto mb-3 text-[var(--muted)]" />
         <div className="text-sm font-medium">Arraste um CSV aqui ou clique para selecionar</div>
         <div className="text-xs text-[var(--muted)] mt-1">
-          Colunas detectadas automaticamente: celular/telefone/phone + nome/name
+          Aceita separador por <strong>ponto e vírgula (;)</strong>, vírgula ou tabulação
         </div>
         <div className="text-xs text-[var(--muted)] mt-0.5">
-          Colunas extras serão salvas em campos dinâmicos disponíveis como variáveis
+          Coluna obrigatória: <strong>telefone</strong> — Opcional: nome, email e outras colunas extras
         </div>
       </div>
 

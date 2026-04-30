@@ -6,17 +6,30 @@ import { parse } from 'csv-parse/sync';
 export class LeadsService {
   constructor(private prisma: PrismaService) {}
 
+  private detectDelimiter(text: string): string {
+    const firstLine = text.split('\n')[0] ?? '';
+    const counts = {
+      ';': (firstLine.match(/;/g) || []).length,
+      '\t': (firstLine.match(/\t/g) || []).length,
+      ',': (firstLine.match(/,/g) || []).length,
+    };
+    return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  }
+
   async importCsv(buffer: Buffer): Promise<{ created: number; updated: number; errors: number }> {
+    const text = buffer.toString('utf-8').replace(/^﻿/, '');
+    const delimiter = this.detectDelimiter(text);
+
     let rows: Record<string, string>[];
     try {
-      rows = parse(buffer, {
+      rows = parse(Buffer.from(text), {
         columns: true,
         skip_empty_lines: true,
         trim: true,
-        bom: true,
+        delimiter,
       });
     } catch (e) {
-      throw new BadRequestException('CSV inválido: ' + e.message);
+      throw new BadRequestException('Arquivo inválido: ' + e.message);
     }
 
     if (!rows.length) throw new BadRequestException('CSV sem dados');
