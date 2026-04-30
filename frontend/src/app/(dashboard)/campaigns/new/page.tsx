@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { ArrowLeft, Plus, Trash2, Zap, HelpCircle } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Zap } from 'lucide-react'
 import Link from 'next/link'
 
 function VarInput({
@@ -90,12 +90,12 @@ export default function NewCampaignPage() {
   const [form, setForm] = useState({
     name: '',
     listId: '',
-    sellerId: '',
     templateId: '',
     message: '',
     link: '',
     imageUrl: '',
   })
+  const [sellerIds, setSellerIds] = useState<string[]>([])
   const [params, setParams] = useState<string[]>([''])
 
   useEffect(() => {
@@ -106,7 +106,6 @@ export default function NewCampaignPage() {
   useEffect(() => {
     if (form.listId) {
       api.getLeadColumns(form.listId).then(cols => {
-        // {{linkbotao}} sempre disponível pois vem do vendedor
         const all = [...new Set([...cols, 'linkbotao'])]
         setColumns(all)
       }).catch(() => {})
@@ -117,6 +116,12 @@ export default function NewCampaignPage() {
 
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }))
+  }
+
+  function toggleSeller(id: string) {
+    setSellerIds(prev =>
+      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+    )
   }
 
   function addParam() { setParams(p => [...p, '']) }
@@ -133,6 +138,7 @@ export default function NewCampaignPage() {
     try {
       await api.createCampaign({
         ...form,
+        sellerIds,
         templateParams: params.filter(Boolean),
       })
       toast.success('Campanha criada!')
@@ -212,31 +218,66 @@ export default function NewCampaignPage() {
           )}
         </div>
 
+        {/* Multi-seller selection */}
         <div>
           <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
-            Vendedor
+            Vendedores
           </label>
-          <select
-            value={form.sellerId}
-            onChange={e => setField('sellerId', e.target.value)}
-            className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground focus:outline-none focus:border-emerald-500 transition-colors"
-          >
-            <option value="">Sem vendedor</option>
-            {sellers.map(s => (
-              <option key={s.id} value={s.id}>
-                {s.name} (@{s.login})
-              </option>
-            ))}
-          </select>
-          {form.sellerId && (() => {
-            const s = sellers.find(x => x.id === form.sellerId)
-            return s ? (
-              <div className="mt-1.5 space-y-0.5">
-                {s.linkBotao && <p className="text-xs text-emerald-400/80"><span className="font-mono">{'{{linkbotao}}'}</span> = https://app.leadroute.com.br/r/{s.linkBotao}</p>}
-                {s.imageUrl && <p className="text-xs text-emerald-400/80">Imagem do vendedor será usada na mensagem</p>}
-              </div>
-            ) : null
-          })()}
+          {sellers.length === 0 ? (
+            <div className="h-9 px-3 flex items-center rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--muted)]">
+              Nenhum vendedor cadastrado
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {sellers.map(s => {
+                const selected = sellerIds.includes(s.id)
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => toggleSeller(s.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md border text-left transition-colors ${
+                      selected
+                        ? 'border-emerald-500 bg-emerald-500/10'
+                        : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--border-2)]'
+                    }`}
+                  >
+                    <div className="w-7 h-7 rounded-full bg-[var(--surface)] border border-[var(--border)] overflow-hidden shrink-0 flex items-center justify-center">
+                      {s.imageUrl
+                        ? <img src={s.imageUrl} alt={s.name} className="w-full h-full object-cover" />
+                        : <span className="text-xs font-semibold text-emerald-400">{s.name[0]?.toUpperCase()}</span>
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{s.name}</div>
+                      {s.linkBotao && (
+                        <div className="text-xs text-[var(--muted)] truncate font-mono">{'{{linkbotao}}'} = …/r/{s.linkBotao}</div>
+                      )}
+                    </div>
+                    <div className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
+                      selected ? 'bg-emerald-500 border-emerald-500' : 'border-[var(--border)]'
+                    }`}>
+                      {selected && (
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                          <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {sellerIds.length > 1 && (
+            <p className="text-xs text-[var(--muted)] mt-2">
+              {sellerIds.length} vendedores selecionados — disparo em sequência (round-robin)
+            </p>
+          )}
+          {sellerIds.length === 1 && (
+            <p className="text-xs text-[var(--muted)] mt-2">
+              1 vendedor selecionado — todos os leads vão para este vendedor
+            </p>
+          )}
         </div>
 
         <div>

@@ -48,17 +48,25 @@ export class DispatchService {
 
       const number = await this.numbersService.getNextNumber();
 
+      // fetch sellers for round-robin assignment
+      const sellers =
+        campaign.sellerIds.length > 0
+          ? await this.prisma.seller.findMany({ where: { id: { in: campaign.sellerIds } } })
+          : [];
+
       const created = await Promise.all(
-        newLeads.map(lead =>
-          this.prisma.dispatch.create({
+        newLeads.map((lead, index) => {
+          const seller = sellers.length > 0 ? sellers[index % sellers.length] : null;
+          return this.prisma.dispatch.create({
             data: {
               campaignId,
               leadId: lead.id,
               waNumberId: number.id,
+              sellerId: seller?.id ?? null,
               status: 'pending',
             },
-          }),
-        ),
+          });
+        }),
       );
       dispatches = created;
     }

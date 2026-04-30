@@ -20,20 +20,18 @@ export class DispatchWorker extends WorkerHost {
 
     const dispatch = await this.prisma.dispatch.findUniqueOrThrow({
       where: { id: dispatchId },
-      include: { lead: true, waNumber: true, campaign: { include: { seller: true } } },
+      include: { lead: true, waNumber: true, seller: true, campaign: true },
     });
 
     if (dispatch.status !== 'pending') return;
 
-    const { lead, waNumber, campaign } = dispatch;
-    const seller = campaign.seller;
+    const { lead, waNumber, campaign, seller } = dispatch;
 
     const leadData: Record<string, string> = {
       nome: lead.fullName || '',
       primeiro_nome: lead.firstName || '',
       telefone: lead.phone,
       ...(lead.extras as Record<string, string>),
-      // vendedor — injeta linkbotao (sufixo da URL do botão)
       ...(seller?.linkBotao ? { linkbotao: seller.linkBotao } : {}),
     };
 

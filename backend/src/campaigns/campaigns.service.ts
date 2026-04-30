@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 
 export interface CreateCampaignDto {
   name: string;
+  listId?: string;
+  sellerIds?: string[];
   templateId?: string;
   templateParams?: string[];
   message?: string;
@@ -23,7 +25,6 @@ export class CampaignsService {
       orderBy: { createdAt: 'desc' },
       include: {
         list: { select: { id: true, name: true } },
-        seller: { select: { id: true, name: true, login: true, imageUrl: true } },
         _count: { select: { dispatches: true } },
       },
     });
@@ -34,7 +35,6 @@ export class CampaignsService {
       where: { id },
       include: {
         list: { select: { id: true, name: true } },
-        seller: { select: { id: true, name: true, login: true, imageUrl: true } },
         _count: { select: { dispatches: true } },
       },
     });
@@ -78,7 +78,11 @@ export class CampaignsService {
         where: { campaignId },
         skip,
         take: limit,
-        include: { lead: true, waNumber: { select: { phone: true, appName: true } } },
+        include: {
+          lead: true,
+          waNumber: { select: { phone: true, appName: true } },
+          seller: { select: { id: true, name: true } },
+        },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.dispatch.count({ where: { campaignId } }),

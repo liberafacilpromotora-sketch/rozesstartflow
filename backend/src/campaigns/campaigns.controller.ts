@@ -18,8 +18,8 @@ class CreateCampaignDto {
   listId?: string;
 
   @IsOptional()
-  @IsString()
-  sellerId?: string;
+  @IsArray()
+  sellerIds?: string[];
 
   @IsOptional()
   @IsString()
