@@ -17,4 +17,4 @@ RUN npm run build
 
 EXPOSE 3001
 
-CMD npx prisma migrate deploy && node dist/main.js
+CMD npx prisma migrate deploy && node dist/src/main.js
