@@ -20,17 +20,31 @@ model User {
   @@map("users")
 }
 
-model Lead {
+model LeadList {
   id        String     @id @default(uuid())
-  phone     String     @unique
-  firstName String?    @map("first_name")
-  fullName  String?    @map("full_name")
-  extras    Json       @default("{}")
+  name      String
   createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
 
+  leads     Lead[]
+  campaigns Campaign[]
+
+  @@map("lead_lists")
+}
+
+model Lead {
+  id        String    @id @default(uuid())
+  listId    String?   @map("list_id")
+  phone     String
+  firstName String?   @map("first_name")
+  fullName  String?   @map("full_name")
+  extras    Json      @default("{}")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  list       LeadList?  @relation(fields: [listId], references: [id], onDelete: Cascade)
   dispatches Dispatch[]
 
+  @@unique([phone, listId])
   @@map("leads")
 }
 
@@ -54,6 +68,7 @@ model WaNumber {
 model Campaign {
   id             String   @id @default(uuid())
   name           String
+  listId         String?  @map("list_id")
   templateId     String?  @map("template_id")
   templateParams String[] @map("template_params")
   message        String?
@@ -64,6 +79,7 @@ model Campaign {
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
+  list       LeadList?  @relation(fields: [listId], references: [id])
   dispatches Dispatch[]
 
   @@map("campaigns")

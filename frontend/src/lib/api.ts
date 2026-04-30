@@ -53,13 +53,21 @@ export const api = {
 
   me: () => request<any>('/auth/me'),
 
+  // Lead Lists (Bases)
+  getLeadLists: () => request<any[]>('/lead-lists'),
+  createLeadList: (name: string) =>
+    request<any>('/lead-lists', { method: 'POST', body: JSON.stringify({ name }) }),
+  deleteLeadList: (id: string) =>
+    request<any>(`/lead-lists/${id}`, { method: 'DELETE' }),
+
   // Leads
-  getLeads: (page = 1, limit = 50, search?: string) =>
-    request<any>(`/leads?page=${page}&limit=${limit}${search ? `&search=${search}` : ''}`),
+  getLeads: (page = 1, limit = 50, search?: string, listId?: string) =>
+    request<any>(`/leads?page=${page}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ''}${listId ? `&listId=${listId}` : ''}`),
 
-  getLeadColumns: () => request<string[]>('/leads/columns'),
+  getLeadColumns: (listId?: string) =>
+    request<string[]>(`/leads/columns${listId ? `?listId=${listId}` : ''}`),
 
-  importLeads: async (file: File) => {
+  importLeads: async (file: File, listId: string) => {
     const token = getToken()
     if (!token) {
       if (typeof window !== 'undefined') window.location.href = '/login'
@@ -67,6 +75,7 @@ export const api = {
     }
     const fd = new FormData()
     fd.append('file', file)
+    fd.append('listId', listId)
     const res = await fetch(`${API}/leads/import`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -88,7 +97,8 @@ export const api = {
     return res.json()
   },
 
-  getLeadCount: () => request<number>('/leads/count'),
+  getLeadCount: (listId?: string) =>
+    request<number>(`/leads/count${listId ? `?listId=${listId}` : ''}`),
 
   // Numbers
   getNumbers: () => request<any[]>('/numbers'),

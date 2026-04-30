@@ -15,6 +15,10 @@ class CreateCampaignDto {
 
   @IsOptional()
   @IsString()
+  listId?: string;
+
+  @IsOptional()
+  @IsString()
   templateId?: string;
 
   @IsOptional()

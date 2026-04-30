@@ -22,6 +22,7 @@ export class CampaignsService {
     return this.prisma.campaign.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
+        list: { select: { id: true, name: true } },
         _count: { select: { dispatches: true } },
       },
     });
@@ -30,7 +31,10 @@ export class CampaignsService {
   async findOne(id: string) {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id },
-      include: { _count: { select: { dispatches: true } } },
+      include: {
+        list: { select: { id: true, name: true } },
+        _count: { select: { dispatches: true } },
+      },
     });
     if (!campaign) throw new NotFoundException('Campanha não encontrada');
     return campaign;

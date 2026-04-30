@@ -19,8 +19,9 @@ export class DispatchService {
       throw new BadRequestException('Campanha já está em execução');
     }
 
-    const leads = await this.prisma.lead.findMany();
-    if (!leads.length) throw new BadRequestException('Nenhum lead disponível');
+    const where = campaign.listId ? { listId: campaign.listId } : {};
+    const leads = await this.prisma.lead.findMany({ where });
+    if (!leads.length) throw new BadRequestException('Nenhum lead disponível na base selecionada');
 
     await this.prisma.campaign.update({
       where: { id: campaignId },

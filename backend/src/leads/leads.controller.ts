@@ -1,6 +1,6 @@
 import {
-  Controller, Get, Post, Query, UploadedFile,
-  UseInterceptors, UseGuards, ParseIntPipe, DefaultValuePipe,
+  Controller, Get, Post, Body, Query, UploadedFile,
+  UseInterceptors, UseGuards, ParseIntPipe, DefaultValuePipe, BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthGuard } from '@nestjs/passport';
@@ -16,8 +16,12 @@ export class LeadsController {
   @Post('import')
   @Roles('master', 'admin')
   @UseInterceptors(FileInterceptor('file'))
-  importCsv(@UploadedFile() file: Express.Multer.File) {
-    return this.leadsService.importCsv(file.buffer);
+  importCsv(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('listId') listId: string,
+  ) {
+    if (!listId) throw new BadRequestException('listId é obrigatório');
+    return this.leadsService.importCsv(file.buffer, listId);
   }
 
   @Get()
@@ -26,19 +30,20 @@ export class LeadsController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
     @Query('search') search?: string,
+    @Query('listId') listId?: string,
   ) {
-    return this.leadsService.findAll(page, limit, search);
+    return this.leadsService.findAll(page, limit, search, listId);
   }
 
   @Get('columns')
   @Roles('master', 'admin')
-  getColumns() {
-    return this.leadsService.getColumns();
+  getColumns(@Query('listId') listId?: string) {
+    return this.leadsService.getColumns(listId);
   }
 
   @Get('count')
   @Roles('master', 'admin')
-  count() {
-    return this.leadsService.count();
+  count(@Query('listId') listId?: string) {
+    return this.leadsService.count(listId);
   }
 }

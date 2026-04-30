@@ -16,7 +16,7 @@ export class LeadsService {
     return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
   }
 
-  async importCsv(buffer: Buffer): Promise<{ created: number; updated: number; errors: number }> {
+  async importCsv(buffer: Buffer, listId: string): Promise<{ created: number; updated: number; errors: number }> {
     const text = buffer.toString('utf-8').replace(/^﻿/, '');
     const delimiter = this.detectDelimiter(text);
 
@@ -57,16 +57,16 @@ export class LeadsService {
           if (k !== phoneKey && k !== nameKey) extras[k] = row[k];
         }
 
-        const existing = await this.prisma.lead.findUnique({ where: { phone } });
+        const existing = await this.prisma.lead.findFirst({ where: { phone, listId } });
         if (existing) {
           await this.prisma.lead.update({
-            where: { phone },
+            where: { id: existing.id },
             data: { fullName, firstName, extras },
           });
           updated++;
         } else {
           await this.prisma.lead.create({
-            data: { phone, fullName, firstName, extras },
+            data: { phone, fullName, firstName, extras, listId },
           });
           created++;
         }
@@ -85,11 +85,12 @@ export class LeadsService {
     return digits;
   }
 
-  async findAll(page = 1, limit = 50, search?: string) {
+  async findAll(page = 1, limit = 50, search?: string, listId?: string) {
     const skip = (page - 1) * limit;
+    const baseWhere = listId ? { listId } : {};
     const where = search
-      ? { OR: [{ phone: { contains: search } }, { fullName: { contains: search, mode: 'insensitive' as const } }] }
-      : {};
+      ? { ...baseWhere, OR: [{ phone: { contains: search } }, { fullName: { contains: search, mode: 'insensitive' as const } }] }
+      : baseWhere;
 
     const [data, total] = await Promise.all([
       this.prisma.lead.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' } }),
@@ -103,14 +104,14 @@ export class LeadsService {
     return this.prisma.lead.findUniqueOrThrow({ where: { id } });
   }
 
-  async getColumns(): Promise<string[]> {
-    const sample = await this.prisma.lead.findFirst();
+  async getColumns(listId?: string): Promise<string[]> {
+    const sample = await this.prisma.lead.findFirst({ where: listId ? { listId } : {} });
     if (!sample) return ['nome', 'telefone'];
     const extras = (sample.extras as Record<string, string>) || {};
     return ['nome', 'primeiro_nome', 'telefone', ...Object.keys(extras)];
   }
 
-  async count() {
-    return this.prisma.lead.count();
+  async count(listId?: string) {
+    return this.prisma.lead.count({ where: listId ? { listId } : {} });
   }
 }

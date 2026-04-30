@@ -84,9 +84,11 @@ function VarInput({
 export default function NewCampaignPage() {
   const router = useRouter()
   const [columns, setColumns] = useState<string[]>([])
+  const [lists, setLists] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     name: '',
+    listId: '',
     templateId: '',
     message: '',
     link: '',
@@ -95,8 +97,16 @@ export default function NewCampaignPage() {
   const [params, setParams] = useState<string[]>([''])
 
   useEffect(() => {
-    api.getLeadColumns().then(setColumns).catch(() => {})
+    api.getLeadLists().then(setLists).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (form.listId) {
+      api.getLeadColumns(form.listId).then(setColumns).catch(() => {})
+    } else {
+      setColumns([])
+    }
+  }, [form.listId])
 
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }))
@@ -110,6 +120,7 @@ export default function NewCampaignPage() {
 
   async function handleSave() {
     if (!form.name) return toast.error('Nome é obrigatório')
+    if (!form.listId) return toast.error('Selecione uma base de leads')
     if (!form.templateId && !form.message) return toast.error('Template ID ou mensagem é obrigatório')
     setSaving(true)
     try {
@@ -168,6 +179,30 @@ export default function NewCampaignPage() {
             placeholder="Ex: Promoção Maio 2025"
             className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
+            Base de Leads *
+          </label>
+          {lists.length === 0 ? (
+            <div className="h-9 px-3 flex items-center rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--muted)]">
+              Nenhuma base criada — vá em Leads e crie uma base primeiro
+            </div>
+          ) : (
+            <select
+              value={form.listId}
+              onChange={e => setField('listId', e.target.value)}
+              className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground focus:outline-none focus:border-emerald-500 transition-colors"
+            >
+              <option value="">Selecione uma base...</option>
+              {lists.map(l => (
+                <option key={l.id} value={l.id}>
+                  {l.name} ({l._count?.leads ?? 0} leads)
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div>
