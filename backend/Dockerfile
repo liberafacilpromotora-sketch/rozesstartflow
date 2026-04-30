@@ -4,20 +4,20 @@ WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Copia os arquivos de config do backend
+# Copiar configs do projeto Nest
 COPY backend/package*.json ./
 COPY backend/nest-cli.json ./
 COPY backend/tsconfig*.json ./
 
 RUN npm install
 
-# Copia prisma e gera client
-COPY backend/prisma ./prisma
+# Copiar TODO o backend agora (importantíssimo)
+COPY backend .
+
+# Gerar prisma client
 RUN npx prisma generate
 
-# Copia o código fonte
-COPY backend/src ./src
-
+# Build do Nest (gera /dist)
 RUN npm run build
 
 EXPOSE 3001
