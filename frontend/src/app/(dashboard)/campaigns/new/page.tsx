@@ -215,7 +215,7 @@ export default function NewCampaignPage() {
             ))}
           </div>
           <p className="text-xs text-[var(--muted)] mt-2">
-            Ordem posicional - cada linha = um parâmetro {{`{1}`}}, {{`{2}`}}, etc.
+            Ordem posicional - cada linha = um parâmetro {'{1}'}, {'{2}'}, etc.
           </p>
         </div>
       </div>
