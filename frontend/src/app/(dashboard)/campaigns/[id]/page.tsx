@@ -116,6 +116,9 @@ export default function CampaignDetailPage() {
                 <CampaignBadge status={campaign.status} />
               )}
             </div>
+            {campaign?.list && (
+              <p className="text-xs text-emerald-500/80 mt-0.5">Base: {campaign.list.name}</p>
+            )}
             {campaign?.templateId && (
               <p className="text-xs text-[var(--muted)] mt-0.5 font-mono">Template: {campaign.templateId}</p>
             )}
