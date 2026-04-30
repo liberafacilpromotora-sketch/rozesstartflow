@@ -19,6 +19,10 @@ class CreateCampaignDto {
 
   @IsOptional()
   @IsString()
+  sellerId?: string;
+
+  @IsOptional()
+  @IsString()
   templateId?: string;
 
   @IsOptional()

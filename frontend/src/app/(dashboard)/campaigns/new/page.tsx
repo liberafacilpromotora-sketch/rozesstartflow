@@ -85,10 +85,12 @@ export default function NewCampaignPage() {
   const router = useRouter()
   const [columns, setColumns] = useState<string[]>([])
   const [lists, setLists] = useState<any[]>([])
+  const [sellers, setSellers] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     name: '',
     listId: '',
+    sellerId: '',
     templateId: '',
     message: '',
     link: '',
@@ -98,13 +100,19 @@ export default function NewCampaignPage() {
 
   useEffect(() => {
     api.getLeadLists().then(setLists).catch(() => {})
+    api.getSellers().then(setSellers).catch(() => {})
   }, [])
 
   useEffect(() => {
     if (form.listId) {
-      api.getLeadColumns(form.listId).then(setColumns).catch(() => {})
+      api.getLeadColumns(form.listId).then(cols => {
+        // adiciona variáveis do vendedor se houver um selecionado
+        const sellerVars = ['login', 'link', 'linkbotao']
+        const all = [...new Set([...cols, ...sellerVars])]
+        setColumns(all)
+      }).catch(() => {})
     } else {
-      setColumns([])
+      setColumns(['login', 'link', 'linkbotao'])
     }
   }, [form.listId])
 
@@ -203,6 +211,32 @@ export default function NewCampaignPage() {
               ))}
             </select>
           )}
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
+            Vendedor
+          </label>
+          <select
+            value={form.sellerId}
+            onChange={e => setField('sellerId', e.target.value)}
+            className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground focus:outline-none focus:border-emerald-500 transition-colors"
+          >
+            <option value="">Sem vendedor</option>
+            {sellers.map(s => (
+              <option key={s.id} value={s.id}>
+                {s.name} (@{s.login})
+              </option>
+            ))}
+          </select>
+          {form.sellerId && (() => {
+            const s = sellers.find(x => x.id === form.sellerId)
+            return s ? (
+              <p className="text-xs text-emerald-400/80 mt-1">
+                {`{{login}}`} = {s.login}{s.linkBotao ? ` · {{linkbotao}} = ${s.linkBotao}` : ''}
+              </p>
+            ) : null
+          })()}
         </div>
 
         <div>

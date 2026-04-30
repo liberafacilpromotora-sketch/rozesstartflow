@@ -23,6 +23,7 @@ export class CampaignsService {
       orderBy: { createdAt: 'desc' },
       include: {
         list: { select: { id: true, name: true } },
+        seller: { select: { id: true, name: true, login: true, imageUrl: true } },
         _count: { select: { dispatches: true } },
       },
     });
@@ -33,6 +34,7 @@ export class CampaignsService {
       where: { id },
       include: {
         list: { select: { id: true, name: true } },
+        seller: { select: { id: true, name: true, login: true, imageUrl: true } },
         _count: { select: { dispatches: true } },
       },
     });

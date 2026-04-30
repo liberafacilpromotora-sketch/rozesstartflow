@@ -20,18 +20,25 @@ export class DispatchWorker extends WorkerHost {
 
     const dispatch = await this.prisma.dispatch.findUniqueOrThrow({
       where: { id: dispatchId },
-      include: { lead: true, waNumber: true, campaign: true },
+      include: { lead: true, waNumber: true, campaign: { include: { seller: true } } },
     });
 
     if (dispatch.status !== 'pending') return;
 
     const { lead, waNumber, campaign } = dispatch;
+    const seller = campaign.seller;
 
     const leadData: Record<string, string> = {
       nome: lead.fullName || '',
       primeiro_nome: lead.firstName || '',
       telefone: lead.phone,
       ...(lead.extras as Record<string, string>),
+      // vendedor — sobrescreve qualquer coluna do CSV com mesmo nome
+      ...(seller ? {
+        login: seller.login,
+        link: seller.link || '',
+        linkbotao: seller.linkBotao || '',
+      } : {}),
     };
 
     const resolvedParams = campaign.templateParams.map(param =>

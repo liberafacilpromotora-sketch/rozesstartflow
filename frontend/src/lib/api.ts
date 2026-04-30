@@ -120,6 +120,12 @@ export const api = {
   getCampaignDispatches: (id: string, page = 1, limit = 50) =>
     request<any>(`/campaigns/${id}/dispatches?page=${page}&limit=${limit}`),
 
+  // Sellers
+  getSellers: () => request<any[]>('/sellers'),
+  createSeller: (data: any) => request<any>('/sellers', { method: 'POST', body: JSON.stringify(data) }),
+  updateSeller: (id: string, data: any) => request<any>(`/sellers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteSeller: (id: string) => request<any>(`/sellers/${id}`, { method: 'DELETE' }),
+
   // Metrics
   getDashboard: (campaignId?: string) =>
     request<any>(`/metrics/dashboard${campaignId ? `?campaignId=${campaignId}` : ''}`),

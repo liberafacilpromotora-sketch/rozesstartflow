@@ -65,10 +65,26 @@ model WaNumber {
   @@map("wa_numbers")
 }
 
+model Seller {
+  id        String   @id @default(uuid())
+  name      String
+  login     String   @unique
+  imageUrl  String?  @map("image_url")
+  link      String?
+  linkBotao String?  @map("link_botao")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  campaigns Campaign[]
+
+  @@map("sellers")
+}
+
 model Campaign {
   id             String   @id @default(uuid())
   name           String
   listId         String?  @map("list_id")
+  sellerId       String?  @map("seller_id")
   templateId     String?  @map("template_id")
   templateParams String[] @map("template_params")
   message        String?
@@ -80,6 +96,7 @@ model Campaign {
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   list       LeadList?  @relation(fields: [listId], references: [id])
+  seller     Seller?    @relation(fields: [sellerId], references: [id])
   dispatches Dispatch[]
 
   @@map("campaigns")

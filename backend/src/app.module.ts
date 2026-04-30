@@ -10,6 +10,7 @@ import { DispatchModule } from './dispatch/dispatch.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { LeadListsModule } from './lead-lists/lead-lists.module';
+import { SellersModule } from './sellers/sellers.module';
 import { PrismaModule } from './common/prisma.module';
 
 function parseRedisUrl(rawUrl: string) {
@@ -37,6 +38,7 @@ function parseRedisUrl(rawUrl: string) {
     WebhookModule,
     MetricsModule,
     LeadListsModule,
+    SellersModule,
   ],
   controllers: [AppController],
   providers: [],

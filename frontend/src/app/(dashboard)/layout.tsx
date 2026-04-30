@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { isAuthenticated, getUser, clearAuth } from '@/lib/auth'
 import {
   LayoutDashboard, Users, Phone, Megaphone,
-  BarChart3, LogOut, Menu, X, Zap
+  UserCheck, LogOut, Menu, X, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,6 +14,7 @@ const NAV = [
   { href: '/leads', label: 'Leads', icon: Users },
   { href: '/numbers', label: 'Números', icon: Phone },
   { href: '/campaigns', label: 'Campanhas', icon: Megaphone },
+  { href: '/sellers', label: 'Vendedores', icon: UserCheck },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
