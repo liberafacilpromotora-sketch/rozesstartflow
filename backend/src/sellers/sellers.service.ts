@@ -3,9 +3,7 @@ import { PrismaService } from '../common/prisma.service';
 
 export interface SellerDto {
   name: string;
-  login: string;
   imageUrl?: string;
-  link?: string;
   linkBotao?: string;
 }
 

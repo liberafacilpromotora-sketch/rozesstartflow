@@ -106,13 +106,12 @@ export default function NewCampaignPage() {
   useEffect(() => {
     if (form.listId) {
       api.getLeadColumns(form.listId).then(cols => {
-        // adiciona variáveis do vendedor se houver um selecionado
-        const sellerVars = ['login', 'link', 'linkbotao']
-        const all = [...new Set([...cols, ...sellerVars])]
+        // {{linkbotao}} sempre disponível pois vem do vendedor
+        const all = [...new Set([...cols, 'linkbotao'])]
         setColumns(all)
       }).catch(() => {})
     } else {
-      setColumns(['login', 'link', 'linkbotao'])
+      setColumns(['linkbotao'])
     }
   }, [form.listId])
 
@@ -232,9 +231,10 @@ export default function NewCampaignPage() {
           {form.sellerId && (() => {
             const s = sellers.find(x => x.id === form.sellerId)
             return s ? (
-              <p className="text-xs text-emerald-400/80 mt-1">
-                {`{{login}}`} = {s.login}{s.linkBotao ? ` · {{linkbotao}} = ${s.linkBotao}` : ''}
-              </p>
+              <div className="mt-1.5 space-y-0.5">
+                {s.linkBotao && <p className="text-xs text-emerald-400/80"><span className="font-mono">{'{{linkbotao}}'}</span> = https://app.leadroute.com.br/r/{s.linkBotao}</p>}
+                {s.imageUrl && <p className="text-xs text-emerald-400/80">Imagem do vendedor será usada na mensagem</p>}
+              </div>
             ) : null
           })()}
         </div>

@@ -33,12 +33,8 @@ export class DispatchWorker extends WorkerHost {
       primeiro_nome: lead.firstName || '',
       telefone: lead.phone,
       ...(lead.extras as Record<string, string>),
-      // vendedor — sobrescreve qualquer coluna do CSV com mesmo nome
-      ...(seller ? {
-        login: seller.login,
-        link: seller.link || '',
-        linkbotao: seller.linkBotao || '',
-      } : {}),
+      // vendedor — injeta linkbotao (sufixo da URL do botão)
+      ...(seller?.linkBotao ? { linkbotao: seller.linkBotao } : {}),
     };
 
     const resolvedParams = campaign.templateParams.map(param =>
@@ -56,8 +52,10 @@ export class DispatchWorker extends WorkerHost {
       }),
     });
 
-    if (campaign.imageUrl) {
-      const resolvedImage = this.variableEngine.resolve(campaign.imageUrl, leadData);
+    // imagem: usa a do vendedor se cadastrada, senão a da campanha (com suporte a variáveis)
+    const imageUrl = seller?.imageUrl || campaign.imageUrl;
+    if (imageUrl) {
+      const resolvedImage = this.variableEngine.resolve(imageUrl, leadData);
       formData.set('message', JSON.stringify({
         type: 'image',
         image: { link: resolvedImage },

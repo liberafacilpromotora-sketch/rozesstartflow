@@ -9,16 +9,9 @@ class CreateSellerDto {
   @IsString()
   name: string;
 
-  @IsString()
-  login: string;
-
   @IsOptional()
   @IsString()
   imageUrl?: string;
-
-  @IsOptional()
-  @IsString()
-  link?: string;
 
   @IsOptional()
   @IsString()
