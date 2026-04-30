@@ -6,6 +6,15 @@ import { parse } from 'csv-parse/sync';
 export class LeadsService {
   constructor(private prisma: PrismaService) {}
 
+  private normalizeKey(key: string): string {
+    return key
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')   // remove acentos
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')       // espaços e especiais → _
+      .replace(/^_+|_+$/g, '');          // trim underscores
+  }
+
   private detectDelimiter(text: string): string {
     const firstLine = text.split('\n')[0] ?? '';
     const counts = {
@@ -35,10 +44,14 @@ export class LeadsService {
     if (!rows.length) throw new BadRequestException('CSV sem dados');
 
     const firstRow = rows[0];
-    const keys = Object.keys(firstRow);
+    const rawKeys = Object.keys(firstRow);
 
-    const phoneKey = keys.find(k => /celular|telefone|phone|fone|whatsapp/i.test(k));
-    const nameKey = keys.find(k => /^nome$|^name$|nome_completo|full_name/i.test(k));
+    // normaliza os nomes de coluna: "VALOR LIBERAÇÃO 35%" → "valor_liberacao_35"
+    const keyMap: Record<string, string> = {};
+    for (const k of rawKeys) keyMap[k] = this.normalizeKey(k);
+
+    const phoneKey = rawKeys.find(k => /celular|telefone|phone|fone|whatsapp/i.test(k));
+    const nameKey  = rawKeys.find(k => /^nome$|^name$|nome_completo|full_name/i.test(k));
 
     if (!phoneKey) throw new BadRequestException('Coluna de telefone não encontrada (esperado: celular, telefone, phone, fone ou whatsapp)');
 
@@ -53,8 +66,9 @@ export class LeadsService {
         const firstName = fullName.split(' ')[0];
 
         const extras: Record<string, string> = {};
-        for (const k of keys) {
-          if (k !== phoneKey && k !== nameKey) extras[k] = row[k];
+        for (const k of rawKeys) {
+          if (k === phoneKey || k === nameKey) continue;
+          extras[keyMap[k]] = row[k] ?? '';  // salva com chave normalizada
         }
 
         const existing = await this.prisma.lead.findFirst({ where: { phone, listId } });
