@@ -143,7 +143,7 @@ export default function NewCampaignPage() {
         <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-4 py-3">
           <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium mb-1.5">
             <Zap size={12} />
-            Variáveis disponíveis — clique em campos com {`{{`} para ver autocomplete
+            Variáveis disponíveis - clique em campos com {`{{`} para ver autocomplete
           </div>
           <div className="flex flex-wrap gap-1.5">
             {columns.map(c => (
@@ -215,7 +215,7 @@ export default function NewCampaignPage() {
             ))}
           </div>
           <p className="text-xs text-[var(--muted)] mt-2">
-            Ordem posicional — cada linha = um parâmetro {{`{1}`}}, {{`{2}`}}, etc.
+            Ordem posicional - cada linha = um parâmetro {{`{1}`}}, {{`{2}`}}, etc.
           </p>
         </div>
       </div>
