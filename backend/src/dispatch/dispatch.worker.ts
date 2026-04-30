@@ -50,9 +50,10 @@ export class DispatchWorker extends WorkerHost {
     });
 
     if (campaign.imageUrl) {
+      const resolvedImage = this.variableEngine.resolve(campaign.imageUrl, leadData);
       formData.set('message', JSON.stringify({
         type: 'image',
-        image: { link: campaign.imageUrl },
+        image: { link: resolvedImage },
       }));
     }
 
