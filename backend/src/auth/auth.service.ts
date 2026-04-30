@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../common/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -24,10 +24,20 @@ export class AuthService {
     };
   }
 
-  async createUser(email: string, password: string, name: string, role = 'client') {
+  async createUser(email: string, password: string, name: string, role = 'admin') {
     const hashed = await bcrypt.hash(password, 10);
     return this.prisma.user.create({
       data: { email, password: hashed, name, role },
+      select: { id: true, email: true, name: true, role: true },
+    });
+  }
+
+  async promoteUser(id: string, role: string) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+    return this.prisma.user.update({
+      where: { id },
+      data: { role },
       select: { id: true, email: true, name: true, role: true },
     });
   }

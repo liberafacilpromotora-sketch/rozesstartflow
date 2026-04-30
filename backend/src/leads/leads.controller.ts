@@ -14,14 +14,14 @@ export class LeadsController {
   constructor(private leadsService: LeadsService) {}
 
   @Post('import')
-  @Roles('master')
+  @Roles('master', 'admin')
   @UseInterceptors(FileInterceptor('file'))
   importCsv(@UploadedFile() file: Express.Multer.File) {
     return this.leadsService.importCsv(file.buffer);
   }
 
   @Get()
-  @Roles('master')
+  @Roles('master', 'admin')
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(50), ParseIntPipe) limit: number,
@@ -31,13 +31,13 @@ export class LeadsController {
   }
 
   @Get('columns')
-  @Roles('master')
+  @Roles('master', 'admin')
   getColumns() {
     return this.leadsService.getColumns();
   }
 
   @Get('count')
-  @Roles('master')
+  @Roles('master', 'admin')
   count() {
     return this.leadsService.count();
   }

@@ -22,7 +22,7 @@ class CreateNumberDtoValidated {
 
 @Controller('numbers')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('master')
+@Roles('master', 'admin')
 export class NumbersController {
   constructor(private numbersService: NumbersService) {}
 

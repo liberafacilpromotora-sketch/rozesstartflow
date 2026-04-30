@@ -5,8 +5,16 @@ function getToken(): string | null {
   return localStorage.getItem('sf_token')
 }
 
+const PUBLIC_PATHS = ['/auth/login', '/auth/register']
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken()
+
+  if (!token && !PUBLIC_PATHS.includes(path)) {
+    if (typeof window !== 'undefined') window.location.href = '/login'
+    throw new Error('Não autenticado')
+  }
+
   const res = await fetch(`${API}${path}`, {
     ...options,
     headers: {
@@ -15,6 +23,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       ...options.headers,
     },
   })
+
+  if (res.status === 401) {
+    localStorage.removeItem('sf_token')
+    localStorage.removeItem('sf_user')
+    if (typeof window !== 'undefined') window.location.href = '/login'
+    throw new Error('Sessão expirada. Faça login novamente.')
+  }
+
+  if (res.status === 403) {
+    throw new Error('Você não tem permissão para realizar esta ação.')
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }))
@@ -40,15 +59,33 @@ export const api = {
 
   getLeadColumns: () => request<string[]>('/leads/columns'),
 
-  importLeads: (file: File) => {
+  importLeads: async (file: File) => {
+    const token = getToken()
+    if (!token) {
+      if (typeof window !== 'undefined') window.location.href = '/login'
+      throw new Error('Não autenticado')
+    }
     const fd = new FormData()
     fd.append('file', file)
-    const token = getToken()
-    return fetch(`${API}/leads/import`, {
+    const res = await fetch(`${API}/leads/import`, {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { Authorization: `Bearer ${token}` },
       body: fd,
-    }).then(r => r.json())
+    })
+    if (res.status === 401) {
+      localStorage.removeItem('sf_token')
+      localStorage.removeItem('sf_user')
+      if (typeof window !== 'undefined') window.location.href = '/login'
+      throw new Error('Sessão expirada. Faça login novamente.')
+    }
+    if (res.status === 403) {
+      throw new Error('Você não tem permissão para realizar esta ação.')
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }))
+      throw new Error(err.message || `HTTP ${res.status}`)
+    }
+    return res.json()
   },
 
   getLeadCount: () => request<number>('/leads/count'),

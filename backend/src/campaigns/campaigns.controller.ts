@@ -36,7 +36,7 @@ class CreateCampaignDto {
 
 @Controller('campaigns')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
-@Roles('master')
+@Roles('master', 'admin')
 export class CampaignsController {
   constructor(
     private campaignsService: CampaignsService,
