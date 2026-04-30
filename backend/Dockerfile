@@ -4,22 +4,17 @@ WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Copiar configs do projeto Nest
-COPY backend/package*.json ./
-COPY backend/nest-cli.json ./
-COPY backend/tsconfig*.json ./
+COPY package*.json ./
+COPY nest-cli.json ./
+COPY tsconfig*.json ./
 
 RUN npm install
 
-# Copiar TODO o backend agora (importantíssimo)
-COPY backend .
+COPY . .
 
-# Gerar prisma client
 RUN npx prisma generate
-
-# Build do Nest (gera /dist)
 RUN npm run build
 
 EXPOSE 3001
 
-CMD ["node", "dist/main.js"]
+CMD npx prisma migrate deploy && node dist/main.js
