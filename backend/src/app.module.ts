@@ -10,15 +10,22 @@ import { DispatchModule } from './dispatch/dispatch.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { PrismaModule } from './common/prisma.module';
-import { ResetDailyService } from './common/interceptors/reset-daily.service';
+
+function parseRedisUrl(rawUrl: string) {
+  const u = new URL(rawUrl);
+  return {
+    host: u.hostname,
+    port: parseInt(u.port || '6379', 10),
+    ...(u.password ? { password: decodeURIComponent(u.password) } : {}),
+    ...(u.protocol === 'rediss:' ? { tls: {} } : {}),
+  };
+}
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     BullModule.forRoot({
-      connection: {
-        url: process.env.REDIS_URL || 'redis://localhost:6379',
-      },
+      connection: parseRedisUrl(process.env.REDIS_URL || 'redis://localhost:6379'),
     }),
     PrismaModule,
     AuthModule,
