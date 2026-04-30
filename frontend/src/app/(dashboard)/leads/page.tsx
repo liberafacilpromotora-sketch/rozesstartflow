@@ -44,7 +44,7 @@ export default function LeadsPage() {
   }
 
   async function handleFile(file: File) {
-    if (!file.name.endsWith('.csv')) return toast.error('Envie um arquivo CSV')
+    if (!file.name.toLowerCase().endsWith('.csv')) return toast.error('Envie um arquivo CSV')
     setUploading(true)
     try {
       const res = await api.importLeads(file)
