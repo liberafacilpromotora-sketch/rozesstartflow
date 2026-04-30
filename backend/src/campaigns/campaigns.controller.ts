@@ -22,6 +22,9 @@ class CreateCampaignDto {
   sellerIds?: string[];
 
   @IsOptional()
+  maxLeads?: number;
+
+  @IsOptional()
   @IsString()
   templateId?: string;
 

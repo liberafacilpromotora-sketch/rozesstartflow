@@ -96,6 +96,7 @@ export default function NewCampaignPage() {
     imageUrl: '',
   })
   const [sellerIds, setSellerIds] = useState<string[]>([])
+  const [maxLeads, setMaxLeads] = useState<string>('')
   const [params, setParams] = useState<string[]>([''])
 
   useEffect(() => {
@@ -139,6 +140,7 @@ export default function NewCampaignPage() {
       await api.createCampaign({
         ...form,
         sellerIds,
+        ...(maxLeads ? { maxLeads: parseInt(maxLeads) } : {}),
         templateParams: params.filter(Boolean),
       })
       toast.success('Campanha criada!')
@@ -215,6 +217,39 @@ export default function NewCampaignPage() {
                 </option>
               ))}
             </select>
+          )}
+        </div>
+
+        {/* Limite de leads */}
+        <div>
+          <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
+            Quantidade de Leads
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMaxLeads('')}
+              className={`h-9 px-4 rounded-md border text-sm transition-colors ${
+                !maxLeads
+                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
+                  : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--border-2)]'
+              }`}
+            >
+              Todos
+            </button>
+            <input
+              type="number"
+              min={1}
+              value={maxLeads}
+              onChange={e => setMaxLeads(e.target.value)}
+              placeholder="Ex: 200"
+              className="flex-1 h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
+            />
+          </div>
+          {maxLeads && (
+            <p className="text-xs text-emerald-400/80 mt-1.5">
+              Apenas os primeiros {parseInt(maxLeads).toLocaleString('pt-BR')} leads da base serão disparados
+            </p>
           )}
         </div>
 

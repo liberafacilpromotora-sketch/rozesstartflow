@@ -20,7 +20,11 @@ export class DispatchService {
     }
 
     const where = campaign.listId ? { listId: campaign.listId } : {};
-    const leads = await this.prisma.lead.findMany({ where });
+    const leads = await this.prisma.lead.findMany({
+      where,
+      ...(campaign.maxLeads ? { take: campaign.maxLeads } : {}),
+      orderBy: { createdAt: 'asc' },
+    });
     if (!leads.length) throw new BadRequestException('Nenhum lead disponível na base selecionada');
 
     await this.prisma.campaign.update({

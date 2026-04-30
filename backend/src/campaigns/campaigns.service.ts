@@ -5,6 +5,7 @@ export interface CreateCampaignDto {
   name: string;
   listId?: string;
   sellerIds?: string[];
+  maxLeads?: number;
   templateId?: string;
   templateParams?: string[];
   message?: string;
