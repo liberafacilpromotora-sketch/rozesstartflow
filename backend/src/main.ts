@@ -17,4 +17,7 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`Startflow backend running on port ${port}`);
 }
-bootstrap();
+bootstrap().catch(err => {
+  console.error('FATAL: bootstrap failed:', err);
+  process.exit(1);
+});
