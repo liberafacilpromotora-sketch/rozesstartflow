@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
+import axios from 'axios';
 
 export class CreateNumberDto {
   phone: string;
@@ -40,6 +41,32 @@ export class NumbersService {
 
   async remove(id: string) {
     return this.prisma.waNumber.delete({ where: { id } });
+  }
+
+  async getTemplates(id: string) {
+    const num = await this.findOne(id);
+    const response = await axios.get(
+      `https://api.gupshup.io/wa/api/v1/templates/${num.appName}`,
+      { headers: { apikey: num.apiKey }, timeout: 10000 },
+    );
+    const templates: any[] = response.data?.templates || [];
+    return templates.map(t => {
+      const bodyParams = (t.data?.match(/\{\{\d+\}\}/g) || []).length;
+      let hasButton = false;
+      try {
+        const buttons = JSON.parse(t.buttons || '[]');
+        hasButton = buttons.some((b: any) => b.type === 'URL' && String(b.url || '').includes('{{'));
+      } catch {}
+      return {
+        id: t.id,
+        name: t.elementName,
+        status: t.status,
+        approved: t.status === 'APPROVED',
+        body: t.data,
+        textParams: bodyParams,
+        hasButton,
+      };
+    });
   }
 
   async getNextNumber() {

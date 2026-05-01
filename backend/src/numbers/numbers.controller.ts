@@ -41,6 +41,11 @@ export class NumbersController {
     return this.numbersService.findOne(id);
   }
 
+  @Get(':id/templates')
+  getTemplates(@Param('id') id: string) {
+    return this.numbersService.getTemplates(id);
+  }
+
   @Patch(':id')
   update(@Param('id') id: string, @Body() dto: Partial<CreateNumberDtoValidated>) {
     return this.numbersService.update(id, dto);

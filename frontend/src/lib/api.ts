@@ -102,6 +102,7 @@ export const api = {
 
   // Numbers
   getNumbers: () => request<any[]>('/numbers'),
+  getNumberTemplates: (id: string) => request<any[]>(`/numbers/${id}/templates`),
   createNumber: (data: any) => request<any>('/numbers', { method: 'POST', body: JSON.stringify(data) }),
   updateNumber: (id: string, data: any) => request<any>(`/numbers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   toggleNumber: (id: string) => request<any>(`/numbers/${id}/toggle`, { method: 'PATCH' }),
