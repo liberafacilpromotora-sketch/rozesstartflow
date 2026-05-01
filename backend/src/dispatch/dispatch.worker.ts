@@ -50,10 +50,13 @@ export class DispatchWorker extends WorkerHost {
       }),
     });
 
-    // imagem: usa a do vendedor se cadastrada, senão a da campanha (com suporte a variáveis)
-    const imageUrl = seller?.imageUrl || campaign.imageUrl;
-    if (imageUrl) {
-      const resolvedImage = this.variableEngine.resolve(imageUrl, leadData);
+    // imagem: vendedor > campanha (suporte a variáveis) > coluna "imagem" do lead
+    const imageTemplate = seller?.imageUrl || campaign.imageUrl;
+    const resolvedImage = imageTemplate
+      ? this.variableEngine.resolve(imageTemplate, leadData)
+      : leadData['imagem'];
+
+    if (resolvedImage) {
       formData.set('message', JSON.stringify({
         type: 'image',
         image: { link: resolvedImage },
