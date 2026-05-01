@@ -75,7 +75,8 @@ export class NumbersService {
 
     return templates.map(t => {
       const body: string = t.data ?? t.body ?? t.template ?? '';
-      const bodyParams = (body.match(/\{\{\d+\}\}/g) || []).length;
+      const uniqueIndices = new Set((body.match(/\{\{(\d+)\}\}/g) || []).map(m => m.replace(/\D/g, '')));
+      const bodyParams = uniqueIndices.size;
       let hasButton = false;
       try {
         const rawButtons = t.buttons ?? t.components ?? '[]';

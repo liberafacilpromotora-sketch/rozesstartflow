@@ -395,11 +395,22 @@ export default function NewCampaignPage() {
                   <span className="text-foreground font-medium">{selectedTemplate.textParams}</span> parâmetros de texto para configurar
                   {selectedTemplate.hasButton && <span className="text-emerald-400/80 ml-2">· botão preenchido automaticamente pelo vendedor</span>}
                 </div>
-                {selectedTemplate.body && (
-                  <div className="text-xs text-[var(--muted)] font-mono bg-[var(--surface-2)] rounded px-2 py-1.5 leading-relaxed line-clamp-3">
-                    {selectedTemplate.body}
-                  </div>
-                )}
+                {selectedTemplate.body && (() => {
+                  const sellerLinkBotao = sellerIds.length > 0
+                    ? sellers.find(s => s.id === sellerIds[0])?.linkBotao
+                    : null
+                  const previewBody = sellerLinkBotao
+                    ? selectedTemplate.body.replace(/\{\{(\d+)\}\}(?=[^}]*\/r\/)/g, sellerLinkBotao)
+                    : selectedTemplate.body
+                  return (
+                    <div className="text-xs text-[var(--muted)] font-mono bg-[var(--surface-2)] rounded px-2 py-1.5 leading-relaxed line-clamp-3">
+                      {previewBody}
+                      {sellerLinkBotao && (
+                        <span className="text-emerald-400 not-italic block mt-1">↑ link da vendedora: {sellerLinkBotao}</span>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             )}
           </div>
