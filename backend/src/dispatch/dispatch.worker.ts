@@ -39,6 +39,10 @@ export class DispatchWorker extends WorkerHost {
       this.variableEngine.resolve(param, leadData),
     );
 
+    if (seller?.linkBotao) {
+      resolvedParams.push(seller.linkBotao);
+    }
+
     const formData = new URLSearchParams({
       channel: 'whatsapp',
       source: waNumber.phone,
