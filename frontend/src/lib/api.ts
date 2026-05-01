@@ -110,6 +110,8 @@ export const api = {
   // Campaigns
   getCampaigns: () => request<any[]>('/campaigns'),
   getCampaign: (id: string) => request<any>(`/campaigns/${id}`),
+  templatePreview: (templateId: string) =>
+    request<any>(`/campaigns/template-preview?templateId=${encodeURIComponent(templateId)}`),
   createCampaign: (data: any) => request<any>('/campaigns', { method: 'POST', body: JSON.stringify(data) }),
   updateCampaign: (id: string, data: any) => request<any>(`/campaigns/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteCampaign: (id: string) => request<any>(`/campaigns/${id}`, { method: 'DELETE' }),

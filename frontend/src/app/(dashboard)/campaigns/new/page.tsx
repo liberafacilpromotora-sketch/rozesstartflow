@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { ArrowLeft, Plus, Trash2, Zap } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Zap, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 function VarInput({
@@ -24,15 +24,10 @@ function VarInput({
     const pos = e.target.selectionStart || 0
     onChange(val)
     setCursorPos(pos)
-
     const before = val.slice(0, pos)
     const match = before.match(/\{\{(\w*)$/)
-    if (match) {
-      setQuery(match[1])
-      setShowSuggestions(true)
-    } else {
-      setShowSuggestions(false)
-    }
+    if (match) { setQuery(match[1]); setShowSuggestions(true) }
+    else setShowSuggestions(false)
   }
 
   function insertVar(col: string) {
@@ -40,8 +35,7 @@ function VarInput({
     const after = value.slice(cursorPos)
     const match = before.match(/\{\{(\w*)$/)
     if (match) {
-      const newBefore = before.slice(0, before.lastIndexOf('{{')) + `{{${col}}}`
-      onChange(newBefore + after)
+      onChange(before.slice(0, before.lastIndexOf('{{')) + `{{${col}}}` + after)
     } else {
       onChange(value + `{{${col}}}`)
     }
@@ -49,9 +43,7 @@ function VarInput({
     inputRef.current?.focus()
   }
 
-  const filtered = columns.filter(c =>
-    c.toLowerCase().includes(query.toLowerCase())
-  )
+  const filtered = columns.filter(c => c.toLowerCase().includes(query.toLowerCase()))
 
   return (
     <div className="relative">
@@ -91,13 +83,13 @@ export default function NewCampaignPage() {
     name: '',
     listId: '',
     templateId: '',
-    message: '',
-    link: '',
     imageUrl: '',
   })
   const [sellerIds, setSellerIds] = useState<string[]>([])
   const [maxLeads, setMaxLeads] = useState<string>('')
   const [params, setParams] = useState<string[]>([''])
+  const [preview, setPreview] = useState<any>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   useEffect(() => {
     api.getLeadLists().then(setLists).catch(() => {})
@@ -107,13 +99,37 @@ export default function NewCampaignPage() {
   useEffect(() => {
     if (form.listId) {
       api.getLeadColumns(form.listId).then(cols => {
-        const all = [...new Set([...cols, 'linkbotao'])]
-        setColumns(all)
+        setColumns([...new Set([...cols])])
       }).catch(() => {})
     } else {
-      setColumns(['linkbotao'])
+      setColumns([])
     }
   }, [form.listId])
+
+  // debounce template preview
+  useEffect(() => {
+    if (!form.templateId || form.templateId.length < 10) {
+      setPreview(null)
+      return
+    }
+    setPreviewLoading(true)
+    const timer = setTimeout(() => {
+      api.templatePreview(form.templateId)
+        .then(data => {
+          setPreview(data)
+          // auto-ajusta os campos de params conforme o template
+          setParams(p => {
+            const target = data.textParams
+            if (p.length === target) return p
+            if (p.length < target) return [...p, ...Array(target - p.length).fill('')]
+            return p.slice(0, target)
+          })
+        })
+        .catch(() => setPreview({ error: true }))
+        .finally(() => setPreviewLoading(false))
+    }, 700)
+    return () => clearTimeout(timer)
+  }, [form.templateId])
 
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }))
@@ -134,7 +150,7 @@ export default function NewCampaignPage() {
   async function handleSave() {
     if (!form.name) return toast.error('Nome é obrigatório')
     if (!form.listId) return toast.error('Selecione uma base de leads')
-    if (!form.templateId && !form.message) return toast.error('Template ID ou mensagem é obrigatório')
+    if (!form.templateId) return toast.error('Template ID é obrigatório')
     setSaving(true)
     try {
       await api.createCampaign({
@@ -152,6 +168,8 @@ export default function NewCampaignPage() {
     }
   }
 
+  const paramsMismatch = preview && !preview.error && params.filter(Boolean).length !== preview.textParams
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
@@ -164,12 +182,11 @@ export default function NewCampaignPage() {
         </div>
       </div>
 
-      {/* Variables hint */}
       {columns.length > 0 && (
         <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-4 py-3">
           <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium mb-1.5">
             <Zap size={12} />
-            Variáveis disponíveis - clique em campos com {`{{`} para ver autocomplete
+            Variáveis disponíveis — clique nos campos para autocomplete
           </div>
           <div className="flex flex-wrap gap-1.5">
             {columns.map(c => (
@@ -220,7 +237,6 @@ export default function NewCampaignPage() {
           )}
         </div>
 
-        {/* Limite de leads */}
         <div>
           <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
             Quantidade de Leads
@@ -248,12 +264,11 @@ export default function NewCampaignPage() {
           </div>
           {maxLeads && (
             <p className="text-xs text-emerald-400/80 mt-1.5">
-              Apenas os primeiros {parseInt(maxLeads).toLocaleString('pt-BR')} leads da base serão disparados
+              Apenas os primeiros {parseInt(maxLeads).toLocaleString('pt-BR')} leads serão disparados
             </p>
           )}
         </div>
 
-        {/* Multi-seller selection */}
         <div>
           <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
             Vendedores
@@ -285,9 +300,10 @@ export default function NewCampaignPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium">{s.name}</div>
-                      {s.linkBotao && (
-                        <div className="text-xs text-[var(--muted)] truncate font-mono">{'{{linkbotao}}'} = …/r/{s.linkBotao}</div>
-                      )}
+                      <div className="text-xs text-[var(--muted)] truncate">
+                        {s.imageUrl && <span className="mr-2">📷 foto</span>}
+                        {s.linkBotao && <span className="font-mono">botão: …/r/{s.linkBotao}</span>}
+                      </div>
                     </div>
                     <div className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
                       selected ? 'bg-emerald-500 border-emerald-500' : 'border-[var(--border)]'
@@ -305,28 +321,75 @@ export default function NewCampaignPage() {
           )}
           {sellerIds.length > 1 && (
             <p className="text-xs text-[var(--muted)] mt-2">
-              {sellerIds.length} vendedores selecionados — disparo em sequência (round-robin)
-            </p>
-          )}
-          {sellerIds.length === 1 && (
-            <p className="text-xs text-[var(--muted)] mt-2">
-              1 vendedor selecionado — todos os leads vão para este vendedor
+              {sellerIds.length} vendedores — round-robin por lead
             </p>
           )}
         </div>
 
+        {/* Template ID + Preview */}
         <div>
           <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
-            Template ID (Gupshup)
+            Template ID (Gupshup) *
           </label>
-          <input
-            value={form.templateId}
-            onChange={e => setField('templateId', e.target.value)}
-            placeholder="Ex: welcome_template_v2"
-            className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors font-mono"
-          />
+          <div className="relative">
+            <input
+              value={form.templateId}
+              onChange={e => setField('templateId', e.target.value)}
+              placeholder="Ex: 043af5e3-2471-44f8-a252-40a3013ecaca"
+              className="w-full h-9 px-3 pr-8 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors font-mono"
+            />
+            {previewLoading && (
+              <Loader2 size={14} className="absolute right-2.5 top-2.5 animate-spin text-[var(--muted)]" />
+            )}
+          </div>
+
+          {/* Preview card */}
+          {preview && !preview.error && (
+            <div className={`mt-2 rounded-lg border px-4 py-3 space-y-2 ${
+              preview.approved
+                ? 'border-emerald-500/30 bg-emerald-500/5'
+                : 'border-amber-500/30 bg-amber-500/5'
+            }`}>
+              <div className="flex items-center gap-2">
+                {preview.approved
+                  ? <CheckCircle size={13} className="text-emerald-400 shrink-0" />
+                  : <AlertCircle size={13} className="text-amber-400 shrink-0" />
+                }
+                <span className="text-sm font-medium">{preview.name}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  preview.approved
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : 'bg-amber-500/10 text-amber-400'
+                }`}>
+                  {preview.approved ? 'Aprovado' : preview.status}
+                </span>
+              </div>
+              <div className="text-xs text-[var(--muted)] space-y-0.5">
+                <div>
+                  <span className="text-foreground font-medium">{preview.textParams}</span> parâmetros de texto para configurar
+                </div>
+                {preview.hasButton && (
+                  <div className="flex items-center gap-1 text-emerald-400/80">
+                    <span>Botão URL dinâmico — preenchido automaticamente pelo vendedor</span>
+                  </div>
+                )}
+              </div>
+              {preview.body && (
+                <div className="text-xs text-[var(--muted)] font-mono bg-[var(--surface-2)] rounded px-2 py-1.5 leading-relaxed line-clamp-3">
+                  {preview.body}
+                </div>
+              )}
+            </div>
+          )}
+          {preview?.error && (
+            <div className="mt-2 rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-2.5 flex items-center gap-2">
+              <AlertCircle size={13} className="text-red-400 shrink-0" />
+              <span className="text-xs text-red-400">Template não encontrado neste número</span>
+            </div>
+          )}
         </div>
 
+        {/* Params */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-xs font-medium text-[var(--foreground-2)] uppercase tracking-wider">
@@ -339,6 +402,7 @@ export default function NewCampaignPage() {
               <Plus size={11} /> Adicionar
             </button>
           </div>
+
           <div className="space-y-2">
             {params.map((p, i) => (
               <div key={i} className="flex items-center gap-2">
@@ -348,7 +412,7 @@ export default function NewCampaignPage() {
                     value={p}
                     onChange={v => setParam(i, v)}
                     columns={columns}
-                    placeholder={`{{nome}} ou texto fixo`}
+                    placeholder="{{nome}} ou texto fixo"
                   />
                 </div>
                 {params.length > 1 && (
@@ -359,33 +423,40 @@ export default function NewCampaignPage() {
               </div>
             ))}
           </div>
+
+          {/* Botão automático */}
+          {preview?.hasButton && (
+            <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-md bg-[var(--surface-2)] border border-dashed border-[var(--border)]">
+              <span className="text-xs text-[var(--muted)] w-6 text-right shrink-0">{params.length + 1}.</span>
+              <span className="text-xs text-emerald-400/70 font-mono">seller.linkBotao</span>
+              <span className="text-xs text-[var(--muted)]">— automático pelo vendedor</span>
+            </div>
+          )}
+
+          {paramsMismatch && (
+            <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+              <AlertCircle size={11} />
+              Template espera {preview.textParams} param(s) de texto, você configurou {params.filter(Boolean).length}
+            </p>
+          )}
+
           <p className="text-xs text-[var(--muted)] mt-2">
-            Ordem posicional - cada linha = um parâmetro {'{1}'}, {'{2}'}, etc.
+            Ordem posicional — cada linha = um parâmetro {'{1}'}, {'{2}'}, etc.
           </p>
         </div>
       </div>
 
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 space-y-4">
         <h2 className="text-sm font-medium border-b border-[var(--border)] pb-3">Opcional</h2>
-
         <div>
           <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">URL da Imagem</label>
           <input
             value={form.imageUrl}
             onChange={e => setField('imageUrl', e.target.value)}
-            placeholder="https://..."
+            placeholder="Deixe vazio para usar a foto do vendedor"
             className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
           />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">Link</label>
-          <input
-            value={form.link}
-            onChange={e => setField('link', e.target.value)}
-            placeholder="https://..."
-            className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
-          />
+          <p className="text-xs text-[var(--muted)] mt-1">Se o vendedor tiver foto cadastrada, ela será usada automaticamente</p>
         </div>
       </div>
 

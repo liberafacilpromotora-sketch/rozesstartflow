@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
-import { ArrowLeft, Plus, Trash2, Zap } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Zap, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
 function VarInput({
@@ -80,13 +80,11 @@ export default function EditCampaignPage() {
   const [sellers, setSellers] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({
-    name: '',
-    templateId: '',
-    imageUrl: '',
-  })
+  const [form, setForm] = useState({ name: '', templateId: '', imageUrl: '' })
   const [sellerIds, setSellerIds] = useState<string[]>([])
   const [params, setParams] = useState<string[]>([''])
+  const [preview, setPreview] = useState<any>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
 
   useEffect(() => {
     Promise.all([api.getCampaign(id), api.getSellers()])
@@ -100,16 +98,30 @@ export default function EditCampaignPage() {
         setParams(campaign.templateParams?.length ? campaign.templateParams : [''])
         setSellerIds(campaign.sellerIds || [])
         if (campaign.listId) {
-          api.getLeadColumns(campaign.listId).then(cols => {
-            setColumns([...new Set([...cols, 'linkbotao'])])
-          }).catch(() => setColumns(['linkbotao']))
-        } else {
-          setColumns(['linkbotao'])
+          api.getLeadColumns(campaign.listId)
+            .then(cols => setColumns([...new Set([...cols])]))
+            .catch(() => setColumns([]))
         }
       })
       .catch(() => toast.error('Erro ao carregar campanha'))
       .finally(() => setLoading(false))
   }, [id])
+
+  // debounce template preview
+  useEffect(() => {
+    if (!form.templateId || form.templateId.length < 10) {
+      setPreview(null)
+      return
+    }
+    setPreviewLoading(true)
+    const timer = setTimeout(() => {
+      api.templatePreview(form.templateId)
+        .then(data => setPreview(data))
+        .catch(() => setPreview({ error: true }))
+        .finally(() => setPreviewLoading(false))
+    }, 700)
+    return () => clearTimeout(timer)
+  }, [form.templateId])
 
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }))
@@ -145,12 +157,10 @@ export default function EditCampaignPage() {
     }
   }
 
+  const paramsMismatch = preview && !preview.error && params.filter(Boolean).length !== preview.textParams
+
   if (loading) {
-    return (
-      <div className="p-6 max-w-2xl mx-auto">
-        <div className="text-sm text-[var(--muted)]">Carregando...</div>
-      </div>
-    )
+    return <div className="p-6 max-w-2xl mx-auto text-sm text-[var(--muted)]">Carregando...</div>
   }
 
   return (
@@ -191,7 +201,7 @@ export default function EditCampaignPage() {
           <input
             value={form.name}
             onChange={e => setField('name', e.target.value)}
-            className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
+            className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
 
@@ -226,9 +236,10 @@ export default function EditCampaignPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium">{s.name}</div>
-                      {s.linkBotao && (
-                        <div className="text-xs text-[var(--muted)] truncate font-mono">{'{{linkbotao}}'} = …/r/{s.linkBotao}</div>
-                      )}
+                      <div className="text-xs text-[var(--muted)] truncate">
+                        {s.imageUrl && <span className="mr-2">📷 foto</span>}
+                        {s.linkBotao && <span className="font-mono">botão: …/r/{s.linkBotao}</span>}
+                      </div>
                     </div>
                     <div className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center transition-colors ${
                       selected ? 'bg-emerald-500 border-emerald-500' : 'border-[var(--border)]'
@@ -250,11 +261,60 @@ export default function EditCampaignPage() {
           <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
             Template ID (Gupshup)
           </label>
-          <input
-            value={form.templateId}
-            onChange={e => setField('templateId', e.target.value)}
-            className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors font-mono"
-          />
+          <div className="relative">
+            <input
+              value={form.templateId}
+              onChange={e => setField('templateId', e.target.value)}
+              className="w-full h-9 px-3 pr-8 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground focus:outline-none focus:border-emerald-500 transition-colors font-mono"
+            />
+            {previewLoading && (
+              <Loader2 size={14} className="absolute right-2.5 top-2.5 animate-spin text-[var(--muted)]" />
+            )}
+          </div>
+
+          {preview && !preview.error && (
+            <div className={`mt-2 rounded-lg border px-4 py-3 space-y-2 ${
+              preview.approved
+                ? 'border-emerald-500/30 bg-emerald-500/5'
+                : 'border-amber-500/30 bg-amber-500/5'
+            }`}>
+              <div className="flex items-center gap-2">
+                {preview.approved
+                  ? <CheckCircle size={13} className="text-emerald-400 shrink-0" />
+                  : <AlertCircle size={13} className="text-amber-400 shrink-0" />
+                }
+                <span className="text-sm font-medium">{preview.name}</span>
+                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
+                  preview.approved
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : 'bg-amber-500/10 text-amber-400'
+                }`}>
+                  {preview.approved ? 'Aprovado' : preview.status}
+                </span>
+              </div>
+              <div className="text-xs text-[var(--muted)] space-y-0.5">
+                <div>
+                  <span className="text-foreground font-medium">{preview.textParams}</span> parâmetros de texto para configurar
+                </div>
+                {preview.hasButton && (
+                  <div className="text-emerald-400/80">
+                    Botão URL dinâmico — preenchido automaticamente pelo vendedor
+                  </div>
+                )}
+              </div>
+              {preview.body && (
+                <div className="text-xs text-[var(--muted)] font-mono bg-[var(--surface-2)] rounded px-2 py-1.5 leading-relaxed line-clamp-3">
+                  {preview.body}
+                </div>
+              )}
+            </div>
+          )}
+          {preview?.error && (
+            <div className="mt-2 rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-2.5 flex items-center gap-2">
+              <AlertCircle size={13} className="text-red-400 shrink-0" />
+              <span className="text-xs text-red-400">Template não encontrado neste número</span>
+            </div>
+          )}
         </div>
 
         <div>
@@ -278,7 +338,7 @@ export default function EditCampaignPage() {
                     value={p}
                     onChange={v => setParam(i, v)}
                     columns={columns}
-                    placeholder={`{{nome}} ou texto fixo`}
+                    placeholder="{{nome}} ou texto fixo"
                   />
                 </div>
                 {params.length > 1 && (
@@ -289,6 +349,22 @@ export default function EditCampaignPage() {
               </div>
             ))}
           </div>
+
+          {preview?.hasButton && (
+            <div className="mt-2 flex items-center gap-2 px-3 py-2 rounded-md bg-[var(--surface-2)] border border-dashed border-[var(--border)]">
+              <span className="text-xs text-[var(--muted)] w-6 text-right shrink-0">{params.length + 1}.</span>
+              <span className="text-xs text-emerald-400/70 font-mono">seller.linkBotao</span>
+              <span className="text-xs text-[var(--muted)]">— automático pelo vendedor</span>
+            </div>
+          )}
+
+          {paramsMismatch && (
+            <p className="text-xs text-amber-400 mt-2 flex items-center gap-1">
+              <AlertCircle size={11} />
+              Template espera {preview.textParams} param(s) de texto, você configurou {params.filter(Boolean).length}
+            </p>
+          )}
+
           <p className="text-xs text-[var(--muted)] mt-2">
             Ordem posicional — cada linha = um parâmetro {'{1}'}, {'{2}'}, etc.
           </p>
@@ -302,9 +378,10 @@ export default function EditCampaignPage() {
           <input
             value={form.imageUrl}
             onChange={e => setField('imageUrl', e.target.value)}
-            placeholder="https://... ou {{imagem}}"
+            placeholder="Deixe vazio para usar a foto do vendedor"
             className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
           />
+          <p className="text-xs text-[var(--muted)] mt-1">Se o vendedor tiver foto cadastrada, ela será usada automaticamente</p>
         </div>
       </div>
 

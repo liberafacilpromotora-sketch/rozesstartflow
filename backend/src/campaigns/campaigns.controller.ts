@@ -64,6 +64,11 @@ export class CampaignsController {
     return this.campaignsService.findAll();
   }
 
+  @Get('template-preview')
+  templatePreview(@Query('templateId') templateId: string) {
+    return this.campaignsService.templatePreview(templateId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.campaignsService.findOne(id);
