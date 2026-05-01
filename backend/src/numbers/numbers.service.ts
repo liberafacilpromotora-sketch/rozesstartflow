@@ -45,24 +45,51 @@ export class NumbersService {
 
   async getTemplates(id: string) {
     const num = await this.findOne(id);
-    const response = await axios.get(
-      `https://api.gupshup.io/wa/api/v1/templates/${num.appName}`,
-      { headers: { apikey: num.apiKey }, timeout: 10000 },
-    );
-    const templates: any[] = response.data?.templates || [];
+    let response: any;
+    const encodedApp = encodeURIComponent(num.appName);
+    try {
+      response = await axios.get(
+        `https://api.gupshup.io/wa/api/v1/templates/${encodedApp}`,
+        { headers: { apikey: num.apiKey }, timeout: 10000 },
+      );
+    } catch (err: any) {
+      // tenta endpoint alternativo
+      try {
+        response = await axios.get(
+          `https://api.gupshup.io/sm/api/v1/template/list/${encodedApp}`,
+          { headers: { apikey: num.apiKey }, timeout: 10000 },
+        );
+      } catch {
+        const msg = err?.response?.data?.message || err.message;
+        throw new Error(`Gupshup 404 — verifique se o App Name "${num.appName}" está correto. Erro: ${msg}`);
+      }
+    }
+
+    // Gupshup pode retornar templates em campos diferentes
+    const raw = response.data;
+    const templates: any[] = raw?.templates ?? raw?.result ?? raw?.data ?? [];
+
+    if (!Array.isArray(templates)) {
+      throw new Error(`Resposta inesperada do Gupshup: ${JSON.stringify(raw).slice(0, 200)}`);
+    }
+
     return templates.map(t => {
-      const bodyParams = (t.data?.match(/\{\{\d+\}\}/g) || []).length;
+      const body: string = t.data ?? t.body ?? t.template ?? '';
+      const bodyParams = (body.match(/\{\{\d+\}\}/g) || []).length;
       let hasButton = false;
       try {
-        const buttons = JSON.parse(t.buttons || '[]');
-        hasButton = buttons.some((b: any) => b.type === 'URL' && String(b.url || '').includes('{{'));
+        const rawButtons = t.buttons ?? t.components ?? '[]';
+        const buttons = typeof rawButtons === 'string' ? JSON.parse(rawButtons) : rawButtons;
+        hasButton = Array.isArray(buttons) && buttons.some(
+          (b: any) => (b.type === 'URL' || b.sub_type === 'url') && String(b.url ?? b.example ?? '').includes('{{'),
+        );
       } catch {}
       return {
-        id: t.id,
-        name: t.elementName,
+        id: t.id ?? t.templateId,
+        name: t.elementName ?? t.name,
         status: t.status,
-        approved: t.status === 'APPROVED',
-        body: t.data,
+        approved: String(t.status).toUpperCase() === 'APPROVED',
+        body,
         textParams: bodyParams,
         hasButton,
       };
