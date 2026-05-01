@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
 import { ArrowLeft, Plus, Trash2, Zap } from 'lucide-react'
@@ -24,15 +24,10 @@ function VarInput({
     const pos = e.target.selectionStart || 0
     onChange(val)
     setCursorPos(pos)
-
     const before = val.slice(0, pos)
     const match = before.match(/\{\{(\w*)$/)
-    if (match) {
-      setQuery(match[1])
-      setShowSuggestions(true)
-    } else {
-      setShowSuggestions(false)
-    }
+    if (match) { setQuery(match[1]); setShowSuggestions(true) }
+    else setShowSuggestions(false)
   }
 
   function insertVar(col: string) {
@@ -40,8 +35,7 @@ function VarInput({
     const after = value.slice(cursorPos)
     const match = before.match(/\{\{(\w*)$/)
     if (match) {
-      const newBefore = before.slice(0, before.lastIndexOf('{{')) + `{{${col}}}`
-      onChange(newBefore + after)
+      onChange(before.slice(0, before.lastIndexOf('{{')) + `{{${col}}}` + after)
     } else {
       onChange(value + `{{${col}}}`)
     }
@@ -49,9 +43,7 @@ function VarInput({
     inputRef.current?.focus()
   }
 
-  const filtered = columns.filter(c =>
-    c.toLowerCase().includes(query.toLowerCase())
-  )
+  const filtered = columns.filter(c => c.toLowerCase().includes(query.toLowerCase()))
 
   return (
     <div className="relative">
@@ -81,39 +73,43 @@ function VarInput({
   )
 }
 
-export default function NewCampaignPage() {
+export default function EditCampaignPage() {
   const router = useRouter()
+  const { id } = useParams<{ id: string }>()
   const [columns, setColumns] = useState<string[]>([])
-  const [lists, setLists] = useState<any[]>([])
   const [sellers, setSellers] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({
     name: '',
-    listId: '',
     templateId: '',
-    message: '',
-    link: '',
     imageUrl: '',
   })
   const [sellerIds, setSellerIds] = useState<string[]>([])
-  const [maxLeads, setMaxLeads] = useState<string>('')
   const [params, setParams] = useState<string[]>([''])
 
   useEffect(() => {
-    api.getLeadLists().then(setLists).catch(() => {})
-    api.getSellers().then(setSellers).catch(() => {})
-  }, [])
-
-  useEffect(() => {
-    if (form.listId) {
-      api.getLeadColumns(form.listId).then(cols => {
-        const all = [...new Set([...cols, 'linkbotao'])]
-        setColumns(all)
-      }).catch(() => {})
-    } else {
-      setColumns(['linkbotao'])
-    }
-  }, [form.listId])
+    Promise.all([api.getCampaign(id), api.getSellers()])
+      .then(([campaign, sels]) => {
+        setSellers(sels)
+        setForm({
+          name: campaign.name || '',
+          templateId: campaign.templateId || '',
+          imageUrl: campaign.imageUrl || '',
+        })
+        setParams(campaign.templateParams?.length ? campaign.templateParams : [''])
+        setSellerIds(campaign.sellerIds || [])
+        if (campaign.listId) {
+          api.getLeadColumns(campaign.listId).then(cols => {
+            setColumns([...new Set([...cols, 'linkbotao'])])
+          }).catch(() => setColumns(['linkbotao']))
+        } else {
+          setColumns(['linkbotao'])
+        }
+      })
+      .catch(() => toast.error('Erro ao carregar campanha'))
+      .finally(() => setLoading(false))
+  }, [id])
 
   useEffect(() => {
     const anyHasLinkBotao = sellerIds.some(id => sellers.find(s => s.id === id)?.linkBotao)
@@ -126,9 +122,9 @@ export default function NewCampaignPage() {
     setForm(f => ({ ...f, [key]: value }))
   }
 
-  function toggleSeller(id: string) {
+  function toggleSeller(sellerId: string) {
     setSellerIds(prev =>
-      prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]
+      prev.includes(sellerId) ? prev.filter(s => s !== sellerId) : [...prev, sellerId]
     )
   }
 
@@ -140,18 +136,15 @@ export default function NewCampaignPage() {
 
   async function handleSave() {
     if (!form.name) return toast.error('Nome é obrigatório')
-    if (!form.listId) return toast.error('Selecione uma base de leads')
-    if (!form.templateId && !form.message) return toast.error('Template ID ou mensagem é obrigatório')
     setSaving(true)
     try {
-      await api.createCampaign({
+      await api.updateCampaign(id, {
         ...form,
         sellerIds,
-        ...(maxLeads ? { maxLeads: parseInt(maxLeads) } : {}),
         templateParams: params.filter(Boolean),
       })
-      toast.success('Campanha criada!')
-      router.push('/campaigns')
+      toast.success('Campanha atualizada!')
+      router.push(`/campaigns/${id}`)
     } catch (err: any) {
       toast.error(err.message)
     } finally {
@@ -159,24 +152,31 @@ export default function NewCampaignPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <div className="text-sm text-[var(--muted)]">Carregando...</div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Link href="/campaigns" className="text-[var(--muted)] hover:text-foreground transition-colors">
+        <Link href={`/campaigns/${id}`} className="text-[var(--muted)] hover:text-foreground transition-colors">
           <ArrowLeft size={16} />
         </Link>
         <div>
-          <h1 className="text-lg font-semibold">Nova Campanha</h1>
-          <p className="text-sm text-[var(--foreground-2)] mt-0.5">Configure o disparo de mensagens</p>
+          <h1 className="text-lg font-semibold">Editar Campanha</h1>
+          <p className="text-sm text-[var(--foreground-2)] mt-0.5">Altere os parâmetros do template</p>
         </div>
       </div>
 
-      {/* Variables hint */}
       {columns.length > 0 && (
         <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-lg px-4 py-3">
           <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium mb-1.5">
             <Zap size={12} />
-            Variáveis disponíveis - clique em campos com {`{{`} para ver autocomplete
+            Variáveis disponíveis
           </div>
           <div className="flex flex-wrap gap-1.5">
             {columns.map(c => (
@@ -198,69 +198,10 @@ export default function NewCampaignPage() {
           <input
             value={form.name}
             onChange={e => setField('name', e.target.value)}
-            placeholder="Ex: Promoção Maio 2025"
             className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
-            Base de Leads *
-          </label>
-          {lists.length === 0 ? (
-            <div className="h-9 px-3 flex items-center rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-[var(--muted)]">
-              Nenhuma base criada — vá em Leads e crie uma base primeiro
-            </div>
-          ) : (
-            <select
-              value={form.listId}
-              onChange={e => setField('listId', e.target.value)}
-              className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground focus:outline-none focus:border-emerald-500 transition-colors"
-            >
-              <option value="">Selecione uma base...</option>
-              {lists.map(l => (
-                <option key={l.id} value={l.id}>
-                  {l.name} ({l._count?.leads ?? 0} leads)
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-
-        {/* Limite de leads */}
-        <div>
-          <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
-            Quantidade de Leads
-          </label>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setMaxLeads('')}
-              className={`h-9 px-4 rounded-md border text-sm transition-colors ${
-                !maxLeads
-                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                  : 'border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)] hover:border-[var(--border-2)]'
-              }`}
-            >
-              Todos
-            </button>
-            <input
-              type="number"
-              min={1}
-              value={maxLeads}
-              onChange={e => setMaxLeads(e.target.value)}
-              placeholder="Ex: 200"
-              className="flex-1 h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
-            />
-          </div>
-          {maxLeads && (
-            <p className="text-xs text-emerald-400/80 mt-1.5">
-              Apenas os primeiros {parseInt(maxLeads).toLocaleString('pt-BR')} leads da base serão disparados
-            </p>
-          )}
-        </div>
-
-        {/* Multi-seller selection */}
         <div>
           <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">
             Vendedores
@@ -310,16 +251,6 @@ export default function NewCampaignPage() {
               })}
             </div>
           )}
-          {sellerIds.length > 1 && (
-            <p className="text-xs text-[var(--muted)] mt-2">
-              {sellerIds.length} vendedores selecionados — disparo em sequência (round-robin)
-            </p>
-          )}
-          {sellerIds.length === 1 && (
-            <p className="text-xs text-[var(--muted)] mt-2">
-              1 vendedor selecionado — todos os leads vão para este vendedor
-            </p>
-          )}
         </div>
 
         <div>
@@ -329,7 +260,6 @@ export default function NewCampaignPage() {
           <input
             value={form.templateId}
             onChange={e => setField('templateId', e.target.value)}
-            placeholder="Ex: welcome_template_v2"
             className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors font-mono"
           />
         </div>
@@ -367,30 +297,19 @@ export default function NewCampaignPage() {
             ))}
           </div>
           <p className="text-xs text-[var(--muted)] mt-2">
-            Ordem posicional - cada linha = um parâmetro {'{1}'}, {'{2}'}, etc.
+            Ordem posicional — cada linha = um parâmetro {'{1}'}, {'{2}'}, etc.
           </p>
         </div>
       </div>
 
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-6 space-y-4">
         <h2 className="text-sm font-medium border-b border-[var(--border)] pb-3">Opcional</h2>
-
         <div>
           <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">URL da Imagem</label>
           <input
             value={form.imageUrl}
             onChange={e => setField('imageUrl', e.target.value)}
-            placeholder="https://..."
-            className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">Link</label>
-          <input
-            value={form.link}
-            onChange={e => setField('link', e.target.value)}
-            placeholder="https://..."
+            placeholder="https://... ou {{imagem}}"
             className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground placeholder:text-[var(--muted)] focus:outline-none focus:border-emerald-500 transition-colors"
           />
         </div>
@@ -398,7 +317,7 @@ export default function NewCampaignPage() {
 
       <div className="flex gap-3">
         <Link
-          href="/campaigns"
+          href={`/campaigns/${id}`}
           className="flex-1 h-9 flex items-center justify-center rounded-md border border-[var(--border)] text-sm hover:bg-[var(--surface-2)] transition-colors"
         >
           Cancelar
@@ -408,7 +327,7 @@ export default function NewCampaignPage() {
           disabled={saving}
           className="flex-1 h-9 rounded-md bg-emerald-500 hover:bg-emerald-600 text-sm font-medium text-white transition-colors disabled:opacity-50"
         >
-          {saving ? 'Criando...' : 'Criar Campanha'}
+          {saving ? 'Salvando...' : 'Salvar Alterações'}
         </button>
       </div>
     </div>

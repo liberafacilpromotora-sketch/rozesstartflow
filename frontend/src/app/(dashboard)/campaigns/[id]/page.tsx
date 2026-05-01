@@ -6,7 +6,7 @@ import { api } from '@/lib/api'
 import { toast } from 'sonner'
 import { formatNumber } from '@/lib/utils'
 import {
-  ArrowLeft, Play, Pause, RefreshCw,
+  ArrowLeft, Play, Pause, RefreshCw, Pencil,
   CheckCheck, Eye, AlertCircle, Clock, MessageSquare
 } from 'lucide-react'
 
@@ -135,6 +135,13 @@ export default function CampaignDetailPage() {
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
           </button>
+          <Link
+            href={`/campaigns/${id}/edit`}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-md border border-[var(--border)] text-sm text-[var(--muted)] hover:text-foreground hover:bg-[var(--surface-2)] transition-colors"
+          >
+            <Pencil size={12} />
+            Editar
+          </Link>
           {campaign?.status !== 'running' && (
             <button
               onClick={handleStart}

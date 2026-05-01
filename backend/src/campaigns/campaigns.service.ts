@@ -50,6 +50,7 @@ export class CampaignsService {
 
   async remove(id: string) {
     await this.findOne(id);
+    await this.prisma.dispatch.deleteMany({ where: { campaignId: id } });
     return this.prisma.campaign.delete({ where: { id } });
   }
 
