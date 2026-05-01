@@ -115,13 +115,6 @@ export default function NewCampaignPage() {
     }
   }, [form.listId])
 
-  useEffect(() => {
-    const anyHasLinkBotao = sellerIds.some(id => sellers.find(s => s.id === id)?.linkBotao)
-    if (anyHasLinkBotao) {
-      setParams(p => p.includes('{{linkbotao}}') ? p : [...p.filter(Boolean), '{{linkbotao}}'])
-    }
-  }, [sellerIds, sellers])
-
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }))
   }
