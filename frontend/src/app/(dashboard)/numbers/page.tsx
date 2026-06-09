@@ -23,7 +23,7 @@ export default function NumbersPage() {
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<any>(null)
-  const [form, setForm] = useState({ phone: '', appName: '', apiKey: '', dailyLimit: 1000 })
+  const [form, setForm] = useState({ phone: '', appName: '', apiKey: '', dailyLimit: 1000, tier: 1 })
   const [saving, setSaving] = useState(false)
 
   async function load() {
@@ -41,13 +41,13 @@ export default function NumbersPage() {
 
   function openCreate() {
     setEditTarget(null)
-    setForm({ phone: '', appName: '', apiKey: '', dailyLimit: 1000 })
+    setForm({ phone: '', appName: '', apiKey: '', dailyLimit: 1000, tier: 1 })
     setModalOpen(true)
   }
 
   function openEdit(n: any) {
     setEditTarget(n)
-    setForm({ phone: n.phone, appName: n.appName, apiKey: n.apiKey, dailyLimit: n.dailyLimit })
+    setForm({ phone: n.phone, appName: n.appName, apiKey: n.apiKey, dailyLimit: n.dailyLimit, tier: n.tier ?? 1 })
     setModalOpen(true)
   }
 
@@ -145,7 +145,12 @@ export default function NumbersPage() {
                 <div className="flex items-center gap-2">
                   <div className={`w-2 h-2 rounded-full mt-0.5 ${n.active && !n.restrictionStatus ? 'bg-emerald-500' : 'bg-red-500'}`} />
                   <div>
-                    <div className="text-sm font-semibold font-mono">{n.phone}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold font-mono">{n.phone}</span>
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        T{n.tier ?? 1}
+                      </span>
+                    </div>
                     <div className="text-xs text-[var(--foreground-2)]">{n.appName}</div>
                   </div>
                 </div>
@@ -213,6 +218,19 @@ export default function NumbersPage() {
               />
             </div>
           ))}
+          <div>
+            <label className="block text-xs font-medium text-[var(--foreground-2)] mb-1.5 uppercase tracking-wider">Tier Meta (velocidade)</label>
+            <select
+              value={form.tier}
+              onChange={e => setForm(f => ({ ...f, tier: +e.target.value }))}
+              className="w-full h-9 px-3 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-sm text-foreground focus:outline-none focus:border-emerald-500 transition-colors"
+            >
+              <option value={1}>Tier 1 — 1.000 msgs/dia (3-5s por msg)</option>
+              <option value={2}>Tier 2 — 10.000 msgs/dia (1-2s por msg)</option>
+              <option value={3}>Tier 3 — 100.000 msgs/dia (0.5-1s por msg)</option>
+              <option value={4}>Tier 4 — Ilimitado (200-500ms por msg)</option>
+            </select>
+          </div>
           <div className="flex gap-2 pt-2">
             <button onClick={() => setModalOpen(false)} className="flex-1 h-9 rounded-md border border-[var(--border)] text-sm hover:bg-[var(--surface-2)] transition-colors">
               Cancelar

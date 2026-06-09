@@ -18,6 +18,10 @@ class CreateNumberDtoValidated {
   @IsOptional()
   @IsNumber()
   dailyLimit?: number;
+
+  @IsOptional()
+  @IsNumber()
+  tier?: number;
 }
 
 @Controller('numbers')

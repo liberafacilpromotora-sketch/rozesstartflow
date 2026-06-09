@@ -54,6 +54,7 @@ model WaNumber {
   appName           String   @map("app_name")
   apiKey            String   @map("api_key")
   active            Boolean  @default(true)
+  tier              Int      @default(1)
   sentCount         Int      @default(0) @map("sent_count")
   dailyLimit        Int      @default(1000) @map("daily_limit")
   restrictionStatus String?  @map("restriction_status")

@@ -7,6 +7,7 @@ export class CreateNumberDto {
   appName: string;
   apiKey: string;
   dailyLimit?: number;
+  tier?: number;
 }
 
 @Injectable()
@@ -98,16 +99,13 @@ export class NumbersService {
   }
 
   async getNextNumber() {
-    const number = await this.prisma.waNumber.findFirst({
+    const numbers = await this.prisma.waNumber.findMany({
       where: { active: true, restrictionStatus: null },
       orderBy: { sentCount: 'asc' },
     });
-    if (!number) throw new Error('Nenhum número ativo disponível');
 
-    await this.prisma.waNumber.update({
-      where: { id: number.id },
-      data: { sentCount: { increment: 1 } },
-    });
+    const number = numbers.find(n => n.sentCount < n.dailyLimit);
+    if (!number) throw new Error('Nenhum número ativo disponível ou todos atingiram o limite diário');
 
     return number;
   }

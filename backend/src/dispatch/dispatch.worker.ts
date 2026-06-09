@@ -88,7 +88,17 @@ export class DispatchWorker extends WorkerHost {
         data: { sentCount: { increment: 1 } },
       });
     } catch (err) {
+      const errorCode = err?.response?.data?.status ?? err?.response?.data?.code;
       const errorMsg = err?.response?.data?.message || err.message;
+
+      // 130429 = MPS rate limit da Meta — não falha, reagenda com backoff por tier
+      if (errorCode === 130429 || err?.response?.status === 429) {
+        const tier = waNumber.tier ?? 1;
+        const retryDelays: Record<number, number> = { 1: 30000, 2: 10000, 3: 5000, 4: 2000 };
+        job.opts.backoff = { type: 'fixed', delay: retryDelays[tier] ?? 30000 };
+        throw err;
+      }
+
       await this.prisma.dispatch.update({
         where: { id: dispatchId },
         data: { status: 'failed', errorMsg },
