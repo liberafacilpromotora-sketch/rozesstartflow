@@ -120,7 +120,12 @@ export default function CampaignsPage() {
                     <div className="flex items-center gap-4 text-xs text-[var(--muted)]">
                       {c.list && <span className="text-emerald-500/70">Base: {c.list.name}</span>}
                       <span>{c.templateId ? `Template: ${c.templateId}` : 'Sem template'}</span>
-                      <span>{formatNumber(c._count?.dispatches || 0)} disparos</span>
+                      <span>{formatNumber(c._count?.dispatches || 0)} disparados</span>
+                      {c.list?._count?.leads != null && (
+                        <span className="text-sky-400/80">
+                          {formatNumber(Math.max(0, c.list._count.leads - (c._count?.dispatches || 0)))} disponíveis
+                        </span>
+                      )}
                       {c.pausedReason && <span className="text-amber-500 truncate max-w-xs">{c.pausedReason}</span>}
                     </div>
                   </div>

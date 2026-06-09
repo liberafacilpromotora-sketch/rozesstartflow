@@ -26,7 +26,7 @@ export class CampaignsService {
     return this.prisma.campaign.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        list: { select: { id: true, name: true } },
+        list: { select: { id: true, name: true, _count: { select: { leads: true } } } },
         _count: { select: { dispatches: true } },
       },
     });
@@ -36,7 +36,7 @@ export class CampaignsService {
     const campaign = await this.prisma.campaign.findUnique({
       where: { id },
       include: {
-        list: { select: { id: true, name: true } },
+        list: { select: { id: true, name: true, _count: { select: { leads: true } } } },
         _count: { select: { dispatches: true } },
       },
     });
