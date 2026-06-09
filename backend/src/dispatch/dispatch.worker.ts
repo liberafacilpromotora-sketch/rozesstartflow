@@ -39,10 +39,6 @@ export class DispatchWorker extends WorkerHost {
       this.variableEngine.resolve(param, leadData),
     );
 
-    if (seller?.linkBotao) {
-      resolvedParams.push(seller.linkBotao);
-    }
-
     const formData = new URLSearchParams({
       channel: 'whatsapp',
       source: waNumber.phone,
@@ -85,6 +81,11 @@ export class DispatchWorker extends WorkerHost {
       await this.prisma.dispatch.update({
         where: { id: dispatchId },
         data: { status: 'submitted', gupshupMessageId: messageId },
+      });
+
+      await this.prisma.waNumber.update({
+        where: { id: waNumber.id },
+        data: { sentCount: { increment: 1 } },
       });
     } catch (err) {
       const errorMsg = err?.response?.data?.message || err.message;
