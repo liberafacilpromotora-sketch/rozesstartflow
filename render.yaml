@@ -1,44 +1,51 @@
 services:
   - type: web
-    name: startflow-backend
+    name: rozesstartflow-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         fromDatabase:
-          name: startflow-db
+          name: rozesstartflow-db
           property: connectionString
       - key: REDIS_URL
         fromService:
-          name: startflow-redis
-          type: redis
+          name: rozesstartflow-redis
+          type: keyvalue
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 8h
       - key: FRONTEND_URL
-        value: https://startflow-frontend.onrender.com
+        value: https://rozesstartflow-frontend.onrender.com
+      - key: NODE_ENV
+        value: production
 
   - type: web
-    name: startflow-frontend
+    name: rozesstartflow-frontend
     runtime: docker
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
     plan: free
+    healthCheckPath: /login
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: https://startflow-backend.onrender.com
+        value: https://rozesstartflow-backend.onrender.com
+      - key: NODE_ENV
+        value: production
 
-  - type: redis
-    name: startflow-redis
+  - type: keyvalue
+    name: rozesstartflow-redis
     plan: free
     maxmemoryPolicy: noeviction
+    ipAllowList: []
 
 databases:
-  - name: startflow-db
+  - name: rozesstartflow-db
     databaseName: startflow
     user: startflow
     plan: free
